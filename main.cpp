@@ -91,6 +91,31 @@ int main(int argc, char *argv[]){
   Options options;
   getOptions(argc, argv, options);
 
+  // Header variables
+  string junk;
+  string comment;
+  string input_mode;
+  int num_traders;
+  int num_stocks;
+
+  // Read in header info
+  getline(cin, comment);
+
+  cin >> junk;
+  cin >> input_mode;
+  cin >> junk;
+
+  cin >> junk;
+  cin >> num_traders;
+  cin >> junk;
+
+  cin >> junk;
+  cin >> num_stocks;
+  cin >> junk;
+
+  
+
+
 
   return 0;
 } // main()
