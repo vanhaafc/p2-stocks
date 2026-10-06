@@ -1,19 +1,13 @@
+// Project Identifier: 0E04A31E0D60C01986ACB20081C9D8722A2619B6
+
 #include <iostream>
 #include <string>
 #include <vector>
-#include "P2random.hpp"
+#include <queue>
+#include "Stock.hpp"
 
 using namespace std;
 
-struct Trader { 
-  int timestamp;
-  bool buy;
-  int trader_ID;
-  int stock_ID;
-  int price;
-  int quantity;
-  // operator() for comparing traders? or is that a separate struct/functor
-};
 
 class Info{
   private:
@@ -24,10 +18,25 @@ class Info{
     int num_traders;
     int num_stocks;
 
-    vector<Trader> sellers;
-    vector<Trader> buyers;
+    vector<Stock> stocks;
 
   public:
+
+    // Default Constructor
+    Info(){
+      comment = "";
+      input_mode = "";
+      num_traders = 0;
+      num_stocks = 0;
+    }
+
+    // TODO: Matches the orders?, call in read?
+    // TODO: all the options (verbose, median, trader_info, time traveler)
+    void match(){
+
+    }
+
+
     // Processing for PR
     void processOrders(P2random::GenStream &g) {
       // Read orders from inputStream, NOT cin
@@ -72,8 +81,9 @@ class Info{
           exit(1);
         }
 
-        if(t.buy) buyers.push_back(t);
-        else sellers.push_back(t);
+        // TODO: fix
+        //if(t.buy) buyers.push(t);
+        //else sellers.push(t);
       } // while
     } // processOrders()
 
@@ -121,12 +131,14 @@ class Info{
           exit(1);
         }
 
-        if(t.buy) buyers.push_back(t);
-        else sellers.push_back(t);
+        // TODO: fix
+        //if(t.buy) buyers.push(t);
+        //else sellers.push(t);
         
       } // while
     } // processOrders()
 
+    // Read in the input file
     void read(){
       string junk;
 
@@ -164,8 +176,5 @@ class Info{
       else{
         processOrders(cin);
       }
-    }
-
-    
-
+    } // read()
 };
