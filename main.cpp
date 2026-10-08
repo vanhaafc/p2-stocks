@@ -92,7 +92,8 @@ int main(int argc, char *argv[]){
   Options options;
   getOptions(argc, argv, options);
 
-  Info i;
+  Info i(options.verbose, options.median, options.trader_info, options.time_travelers);
+  i.read();
 
   return 0;
 } // main()

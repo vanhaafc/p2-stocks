@@ -20,20 +20,42 @@ class Info{
 
     vector<Stock> stocks;
 
+    bool verbose;
+    bool median;
+    bool trader_info;
+    bool time_travelers;
+
+    int trade_count;
+
   public:
 
     // Default Constructor
-    Info(){
+    Info(bool v, bool m, bool ti, bool tt){
+      verbose = v;
+      median = m;
+      trader_info = ti;
+
+      time_travelers = tt;
+
       comment = "";
       input_mode = "";
       num_traders = 0;
       num_stocks = 0;
+      trade_count = 0;
+
+      for(int i = 1; i <= num_stocks; i++){
+        Stock s;
+        stocks.push_back(s);
+      }
     }
 
     // TODO: Matches the orders?, call in read?
     // TODO: all the options (verbose, median, trader_info, time traveler)
     void match(){
-
+      for(size_t i = 0; i < stocks.size(); i++){
+        // TODO: add parameters (verbose, median time traveler, trader info)
+        trade_count += stocks[i].match_traders(verbose, median, trader_info);
+      }
     }
 
 
@@ -81,9 +103,11 @@ class Info{
           exit(1);
         }
 
-        // TODO: fix
-        //if(t.buy) buyers.push(t);
-        //else sellers.push(t);
+        // Add Trader to that stockID
+        stocks[t.stock_ID].add_stock(t);
+
+        // Match the stocks
+        match();
       } // while
     } // processOrders()
 
@@ -131,15 +155,18 @@ class Info{
           exit(1);
         }
 
-        // TODO: fix
-        //if(t.buy) buyers.push(t);
-        //else sellers.push(t);
-        
+        // Add Trader to that stockID
+        stocks[t.stock_ID].add_stock(t);
+
+        // Match the stocks
+        match();
       } // while
     } // processOrders()
 
     // Read in the input file
     void read(){
+      cout << "Processing orders...\n";
+
       string junk;
 
       getline(cin, comment);
@@ -175,6 +202,11 @@ class Info{
       }
       else{
         processOrders(cin);
+      }
+
+      cout << "---End of Day---\n" << "Trades Completed: " << trade_count << "\n";
+      if(trader_info){
+
       }
     } // read()
 };
