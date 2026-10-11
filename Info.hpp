@@ -8,6 +8,13 @@
 
 using namespace std;
 
+// Enum class for time traveler
+enum class TimeStatus:char{
+  NoTrades,
+  CanBuy,
+  Completed,
+  Potential
+};
 
 class Info{
   private:
@@ -26,6 +33,10 @@ class Info{
     bool time_travelers;
 
     int trade_count;
+    int order_priority;
+
+    // TODO: add TraderStats to array when reading
+    vector<TraderStats> stats;
 
   public:
 
@@ -42,6 +53,7 @@ class Info{
       num_traders = 0;
       num_stocks = 0;
       trade_count = 0;
+      order_priority = 0;
 
       for(int i = 1; i <= num_stocks; i++){
         Stock s;
@@ -49,15 +61,12 @@ class Info{
       }
     }
 
-    // TODO: Matches the orders?, call in read?
-    // TODO: all the options (verbose, median, trader_info, time traveler)
+    // Matches the orders, call in read
     void match(){
       for(size_t i = 0; i < stocks.size(); i++){
-        // TODO: add parameters (verbose, median time traveler, trader info)
-        trade_count += stocks[i].match_traders(verbose, median, trader_info);
+        trade_count += stocks[i].match_traders(verbose, median, trader_info, stats);
       }
     }
-
 
     // Processing for PR
     void processOrders(P2random::GenStream &g) {
@@ -74,6 +83,15 @@ class Info{
           cerr << "Decreasing timestamp";
           exit(1);
         }
+
+        // Median - print if timestamp changes
+        if(t.timestamp > previous_timestamp && median){
+          for(size_t i = 0; i < stocks.size(); i++){
+            cout << "Median match price of Stock " << i << " at time " 
+            << previous_timestamp << " is $" << stocks[i].get_median() << "\n";
+          }
+        }
+
         previous_timestamp = t.timestamp;
 
         if(buy_sell == "BUY") t.buy = true;
@@ -101,6 +119,17 @@ class Info{
         if(t.quantity <= 0){
           cerr << "Invalid quantity (<= 0)";
           exit(1);
+        }
+
+        t.order_number = order_priority;
+        order_priority++;
+
+        if(trader_info){
+          TraderStats ts;
+          ts.bought = 0;
+          ts.sold = 0;
+          ts.net_transfer = 0;
+          stats.push_back(ts);
         }
 
         // Add Trader to that stockID
@@ -155,6 +184,17 @@ class Info{
           exit(1);
         }
 
+        t.order_number = order_priority;
+        order_priority++;
+
+        if(trader_info){
+          TraderStats ts;
+          ts.bought = 0;
+          ts.sold = 0;
+          ts.net_transfer = 0;
+          stats.push_back(ts);
+        }
+
         // Add Trader to that stockID
         stocks[t.stock_ID].add_stock(t);
 
@@ -205,8 +245,14 @@ class Info{
       }
 
       cout << "---End of Day---\n" << "Trades Completed: " << trade_count << "\n";
-      if(trader_info){
 
+      if(trader_info){
+          cout << "---Trader Info---\n"; 
+          for (int i = 0; i < num_traders; ++i) { 
+            cout << "Trader " << i << "bought" << stats[i].bought 
+            << " and sold " << stats[i].sold << " for a net transfer of " 
+            << stats[i].net_transfer << "\n";
+          }
       }
     } // read()
-};
+  };
