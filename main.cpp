@@ -79,7 +79,7 @@ void getOptions(int argc, char **argv, Options &options) {
             break;
 
         default:
-            cerr << "Unknown option\n";
+            cerr << "Unknown command line option\n";
             exit(1);
 
         }

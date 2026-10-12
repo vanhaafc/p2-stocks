@@ -24,6 +24,31 @@ struct Trader {
   int order_number;
 };
 
+// Enum class for time traveler
+enum class TimeStatus:char{
+  NoTrades,
+  CanBuy,
+  Completed,
+};
+
+struct TimeTraveler
+{
+  TimeStatus state = TimeStatus::NoTrades;
+
+  // Tracking current candidate for lowest sell order (buy price for traveler)
+  int current_min_sell_price = 0;
+  int current_min_sell_time = 0;
+
+  // Tracking overall best profit pair found so far
+  int max_profit = 0;
+  // Price from SELL order
+  int best_buy_price = 0;
+  int best_buy_time = 0;
+  // Price from BUY order
+  int best_sell_price = 0;
+  int best_sell_time = 0;
+};
+
 // Buyer comparator
 struct compareBuyer{
   bool operator() (const Trader a, const Trader b) const {
@@ -34,7 +59,7 @@ struct compareBuyer{
 
 
 // Seller comparator
-struct compareSeller {
+struct compareSeller{
   bool operator() (const Trader a, const Trader b) const {
     if(a.price == b.price) return a.order_number > b.order_number;
     return a.price > b.price;
@@ -52,7 +77,14 @@ class Stock{
     // We want the smallest of the big numbers
     priority_queue<int, vector<int>, greater<>> big_half;
 
+    // Time Travelers
+    TimeTraveler tt;
+
   public:
+    void time_travel(){
+
+    }
+
     void add_to_median(int price){
       if(small_half.empty() || price < big_half.top()){
         small_half.push(price);
@@ -71,15 +103,40 @@ class Stock{
       }
     }
 
-    void add_stock(Trader &t){
+    void add_stock(Trader &t, bool m, bool time_travel){
       if(t.buy) buyers.push(t);
       else sellers.push(t);
 
-      add_to_median(t.price);
+      if(m) add_to_median(t.price);
+
+      if(time_travel){
+        // Time Travelers
+        if (!t.buy){
+          if (tt.state == TimeStatus::NoTrades){
+            tt.state = TimeStatus::CanBuy;
+            tt.current_min_sell_price = t.price;
+            tt.current_min_sell_time = t.timestamp;
+          }
+          else{
+            if (t.price < tt.current_min_sell_price){
+              int potential_profit = t.price - tt.current_min_sell_price;
+              if (potential_profit > tt.max_profit){
+                tt.max_profit = potential_profit;
+                tt.best_buy_price = tt.current_min_sell_price;
+                tt.best_buy_time = tt.current_min_sell_time;
+                tt.best_sell_price = t.price;
+                tt.best_sell_time = t.timestamp;
+
+                tt.state = TimeStatus::Completed;
+              }
+            }
+          }
+        }
+      }
     }
 
     // Match buyers and sellers for this stock ID
-    int match_traders(bool v, bool m, bool ti, vector<TraderStats> &stats){
+    int match_traders(bool v, bool ti, vector<TraderStats> &stats){
       int count = 0;
       bool matching = true;
       while(matching){
@@ -131,4 +188,21 @@ class Stock{
         return small_half.top() + big_half.top() / 2;
       }
     }
+  
+    int get_buy_time(){
+      return tt.best_buy_time;
+    }
+
+    int get_buy_price(){
+      return tt.best_buy_price;
+    }
+
+    int get_sell_time(){
+      return tt.best_sell_time;
+    }
+
+    int get_sell_price(){
+      return tt.best_sell_price;
+    }
+  
   };

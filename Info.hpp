@@ -8,251 +8,219 @@
 
 using namespace std;
 
-// Enum class for time traveler
-enum class TimeStatus:char{
-  NoTrades,
-  CanBuy,
-  Completed,
-  Potential
-};
+class Info
+{
+private:
+  bool pr = false;
 
-class Info{
-  private:
-    bool pr = false;
+  string comment;
+  string input_mode;
+  int num_traders;
+  int num_stocks;
 
-    string comment;
-    string input_mode;
-    int num_traders;
-    int num_stocks;
+  vector<Stock> stocks;
 
-    vector<Stock> stocks;
+  bool verbose;
+  bool median;
+  bool trader_info;
+  bool time_travelers;
 
-    bool verbose;
-    bool median;
-    bool trader_info;
-    bool time_travelers;
+  int trade_count;
+  int order_priority;
 
-    int trade_count;
-    int order_priority;
+  // Trader Info
+  vector<TraderStats> stats;
 
-    // TODO: add TraderStats to array when reading
-    vector<TraderStats> stats;
+public:
+  // Default Constructor
+  Info(bool v, bool m, bool ti, bool tt){
+    verbose = v;
+    median = m;
+    trader_info = ti;
 
-  public:
+    time_travelers = tt;
 
-    // Default Constructor
-    Info(bool v, bool m, bool ti, bool tt){
-      verbose = v;
-      median = m;
-      trader_info = ti;
+    comment = "";
+    input_mode = "";
+    num_traders = 0;
+    num_stocks = 0;
+    trade_count = 0;
+    order_priority = 0;
 
-      time_travelers = tt;
+    for (int i = 1; i <= num_stocks; i++){
+      Stock s;
+      stocks.push_back(s);
+    }
+  }
 
-      comment = "";
-      input_mode = "";
-      num_traders = 0;
-      num_stocks = 0;
-      trade_count = 0;
-      order_priority = 0;
+  // Matches the orders, call in read
+  void match(){
+    for (size_t i = 0; i < stocks.size(); i++){
+      trade_count += stocks[i].match_traders(verbose, trader_info, stats);
+    }
+  }
 
-      for(int i = 1; i <= num_stocks; i++){
-        Stock s;
-        stocks.push_back(s);
+  int process(Trader &t, string b_s, int prev){
+    // Check for decreasing timestamp
+    if (t.timestamp < prev){
+      cerr << "Decreasing timestamp";
+      exit(1);
+    }
+
+    // Median Output
+    if (t.timestamp > prev && median){
+      for (size_t i = 0; i < stocks.size(); i++){
+        cout << "Median match price of Stock " << i << " at time "
+             << prev << " is $" << stocks[i].get_median() << "\n";
       }
     }
 
-    // Matches the orders, call in read
-    void match(){
-      for(size_t i = 0; i < stocks.size(); i++){
-        trade_count += stocks[i].match_traders(verbose, median, trader_info, stats);
-      }
+    int time = t.timestamp;
+
+    if (b_s == "BUY")
+      t.buy = true;
+    else
+      t.buy = false;
+
+    // Check for invalid trader ID
+    if (t.trader_ID < 0 || t.trader_ID >= num_traders){
+      cerr << "Invalid trader ID";
+      exit(1);
     }
 
-    // Processing for PR
-    void processOrders(P2random::GenStream &g) {
-      // Read orders from inputStream, NOT cin
-      Trader t;
-      char c;
-      string buy_sell;
-      int previous_timestamp = 0;
-      string new_line;
-      while (g >> t.timestamp >> buy_sell >> c >> t.trader_ID 
-              >> c >> t.stock_ID >> c >> t.price >> c >> t.quantity >> new_line) {
-        // Check for decreasing timestamp
-        if(t.timestamp < previous_timestamp){
-          cerr << "Decreasing timestamp";
-          exit(1);
-        }
+    // Check for invalid stock ID
+    if (t.stock_ID < 0 || t.stock_ID >= num_stocks){
+      cerr << "Invalid stock ID";
+      exit(1);
+    }
 
-        // Median - print if timestamp changes
-        if(t.timestamp > previous_timestamp && median){
-          for(size_t i = 0; i < stocks.size(); i++){
-            cout << "Median match price of Stock " << i << " at time " 
-            << previous_timestamp << " is $" << stocks[i].get_median() << "\n";
-          }
-        }
+    // Check for price <= 0
+    if (t.price <= 0){
+      cerr << "Invalid price (<= 0)";
+      exit(1);
+    }
 
-        previous_timestamp = t.timestamp;
+    // Check for quantity <= 0
+    if (t.quantity <= 0){
+      cerr << "Invalid quantity (<= 0)";
+      exit(1);
+    }
 
-        if(buy_sell == "BUY") t.buy = true;
-        else t.buy = false;
+    t.order_number = order_priority;
+    order_priority++;
 
-        // Check for invalid trader ID
-        if(t.trader_ID < 0 || t.trader_ID >= num_traders){
-          cerr << "Invalid trader ID";
-          exit(1);
-        }
+    if (trader_info){
+      TraderStats ts;
+      ts.bought = 0;
+      ts.sold = 0;
+      ts.net_transfer = 0;
+      stats.push_back(ts);
+    }
 
-        // Check for invalid stock ID
-        if(t.stock_ID < 0 || t.stock_ID >= num_stocks){
-          cerr << "Invalid stock ID";
-          exit(1);
-        }
+    // Add Trader to that stockID
+    stocks[t.stock_ID].add_stock(t, median, time_travelers);
 
-        // Check for price <= 0
-        if(t.price <= 0){
-          cerr << "Invalid price (<= 0)";
-          exit(1);
-        }
+    return time;
+  }
 
-        // Check for quantity <= 0
-        if(t.quantity <= 0){
-          cerr << "Invalid quantity (<= 0)";
-          exit(1);
-        }
+  // Processing for PR
+  void processOrders(P2random::GenStream &g){
+    // Read orders from inputStream, NOT cin
+    Trader t;
+    char c;
+    string buy_sell;
+    int previous_timestamp = 0;
+    string new_line;
+    while (g >> t.timestamp >> buy_sell >> c >> t.trader_ID >> c >> t.stock_ID >> c >> t.price >> c >> t.quantity >> new_line){
+      // Process order
+      previous_timestamp = process(t, buy_sell, previous_timestamp);
 
-        t.order_number = order_priority;
-        order_priority++;
+      // Match the stocks
+      match();
+    } // while
+  } // processOrders()
 
-        if(trader_info){
-          TraderStats ts;
-          ts.bought = 0;
-          ts.sold = 0;
-          ts.net_transfer = 0;
-          stats.push_back(ts);
-        }
+  // Processing for TL
+  void processOrders(istream &inputStream){
+    // Read orders from inputStream, NOT cin
+    Trader t;
+    char c;
+    string buy_sell;
+    int previous_timestamp = 0;
+    string new_line;
+    while (inputStream >> t.timestamp >> buy_sell >> c >> t.trader_ID >> c >> t.stock_ID >> c >> t.price >> c >> t.quantity >> new_line){
+      // Process order
+      previous_timestamp = process(t, buy_sell, previous_timestamp);
 
-        // Add Trader to that stockID
-        stocks[t.stock_ID].add_stock(t);
+      // Match stocks
+      match();
+    } // while
+  } // processOrders()
 
-        // Match the stocks
-        match();
-      } // while
-    } // processOrders()
+  // Read in the input file
+  void read(){
+    cout << "Processing orders...\n";
 
-    // Processing for TL
-    void processOrders(istream &inputStream) {
-      // Read orders from inputStream, NOT cin
-      Trader t;
-      char c;
-      string buy_sell;
-      int previous_timestamp = 0;
-      string new_line;
-      while (inputStream >> t.timestamp >> buy_sell >> c >> t.trader_ID 
-              >> c >> t.stock_ID >> c >> t.price >> c >> t.quantity >> new_line) {
-        // Check for decreasing timestamp
-        if(t.timestamp < previous_timestamp){
-          cerr << "Decreasing timestamp";
-          exit(1);
-        }
-        previous_timestamp = t.timestamp;
+    string junk;
 
-        if(buy_sell == "BUY") t.buy = true;
-        else t.buy = false;
+    getline(cin, comment);
 
-        // Check for invalid trader ID
-        if(t.trader_ID < 0 || t.trader_ID >= num_traders){
-          cerr << "Invalid trader ID";
-          exit(1);
-        }
+    cin >> junk;
+    cin >> input_mode;
+    if (input_mode == "PR") pr = true;
+    cin >> junk;
 
-        // Check for invalid stock ID
-        if(t.stock_ID < 0 || t.stock_ID >= num_stocks){
-          cerr << "Invalid stock ID";
-          exit(1);
-        }
+    cin >> junk;
+    cin >> num_traders;
+    cin >> junk;
 
-        // Check for price <= 0
-        if(t.price <= 0){
-          cerr << "Invalid price (<= 0)";
-          exit(1);
-        }
+    cin >> junk;
+    cin >> num_stocks;
+    cin >> junk;
 
-        // Check for quantity <= 0
-        if(t.quantity <= 0){
-          cerr << "Invalid quantity (<= 0)";
-          exit(1);
-        }
+    P2random::GenStream gen;
 
-        t.order_number = order_priority;
-        order_priority++;
-
-        if(trader_info){
-          TraderStats ts;
-          ts.bought = 0;
-          ts.sold = 0;
-          ts.net_transfer = 0;
-          stats.push_back(ts);
-        }
-
-        // Add Trader to that stockID
-        stocks[t.stock_ID].add_stock(t);
-
-        // Match the stocks
-        match();
-      } // while
-    } // processOrders()
-
-    // Read in the input file
-    void read(){
-      cout << "Processing orders...\n";
+    if (pr){
+      int seed;
+      int num_orders;
+      int rate;
 
       string junk;
-
-      getline(cin, comment);
-
       cin >> junk;
-      cin >> input_mode;
-      if(input_mode == "PR") pr = true;
-      cin >> junk;
+      cin >> seed;
+      cin >> num_orders;
+      cin >> rate;
 
-      cin >> junk;
-      cin >> num_traders;
-      cin >> junk;
+      gen.init(seed, num_traders, num_stocks, num_orders, rate);
+      processOrders(gen);
+    }
+    else{
+      processOrders(cin);
+    }
 
-      cin >> junk;
-      cin >> num_stocks;
-      cin >> junk;
+    cout << "---End of Day---\n"
+         << "Trades Completed: " << trade_count << "\n";
 
-      P2random::GenStream gen;
-      
-      if(pr){
-        int seed;
-        int num_orders;
-        int rate;
-
-        string junk;
-        cin >> junk;
-        cin >> seed;
-        cin >> num_orders;
-        cin >> rate;
-
-        gen.init(seed, num_traders, num_stocks, num_orders, rate);
-        processOrders(gen);
+    // Trader Info Ooutput
+    if (trader_info){
+      cout << "---Trader Info---\n";
+      for (int i = 0; i < num_traders; ++i)
+      {
+        cout << "Trader " << i << "bought" << stats[i].bought
+             << " and sold " << stats[i].sold << " for a net transfer of "
+             << stats[i].net_transfer << "\n";
       }
-      else{
-        processOrders(cin);
-      }
+    }
 
-      cout << "---End of Day---\n" << "Trades Completed: " << trade_count << "\n";
-
-      if(trader_info){
-          cout << "---Trader Info---\n"; 
-          for (int i = 0; i < num_traders; ++i) { 
-            cout << "Trader " << i << "bought" << stats[i].bought 
-            << " and sold " << stats[i].sold << " for a net transfer of " 
-            << stats[i].net_transfer << "\n";
-          }
+    // Time Travelers Output
+    if (time_travelers){
+      cout << "---Time Travelers---\n";
+      for (size_t i = 0; i < stocks.size(); i++){
+        Stock s = stocks[i];
+        cout << "A time traveler would buy Stock " << i << " at time " << s.get_buy_time() 
+        << " for $"  << s.get_buy_price() << " and sell it at time " << s.get_sell_time() 
+        << " for " << s.get_sell_price();
       }
-    } // read()
-  };
+    }
+  } // read()
+};
