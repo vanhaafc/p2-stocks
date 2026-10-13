@@ -1,0 +1,7 @@
+COMMENT: Partial fill and time-priority tie-breaking test
+MODE: TL
+NUM_TRADERS: 3
+NUM_STOCKS: 1
+0 SELL T0 S0 $100 #50 
+0 SELL T1 S0 $100 #30 
+0 BUY T2 S0 $110 #70

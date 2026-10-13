@@ -1,0 +1,10 @@
+COMMENT: Median tracking with even trade count integer division 
+MODE: TL 
+NUM_TRADERS: 4 
+NUM_STOCKS: 2 
+0 SELL T0 S0 $100 #10 
+0 BUY T1 S0 $100 #10 
+0 SELL T2 S0 $50 #10 
+0 BUY T3 S0 $50 #10 
+1 SELL T0 S1 $20 #10 
+2 BUY T1 S1 $40 #10

@@ -29,24 +29,22 @@ enum class TimeStatus:char{
   NoTrades,
   CanBuy,
   Completed,
+  Potential,
 };
 
 struct TimeTraveler
 {
   TimeStatus state = TimeStatus::NoTrades;
 
-  // Tracking current candidate for lowest sell order (buy price for traveler)
-  int current_min_sell_price = 0;
-  int current_min_sell_time = 0;
-
-  // Tracking overall best profit pair found so far
-  int max_profit = 0;
-  // Price from SELL order
+  // Best buy (from a SELL order) and sell (to a BUY order) found so far
   int best_buy_price = 0;
   int best_buy_time = 0;
-  // Price from BUY order
   int best_sell_price = 0;
   int best_sell_time = 0;
+
+  // Lower SELL seen after a completed pair, might lead to a better profit
+  int potential_buy_price = 0;
+  int potential_buy_time = 0;
 };
 
 // Buyer comparator
@@ -81,103 +79,138 @@ class Stock{
     TimeTraveler tt;
 
   public:
-    void time_travel(){
-
-    }
-
     void add_to_median(int price){
-      if(small_half.empty() || price < big_half.top()){
+      if(small_half.empty() || price <= small_half.top()){
         small_half.push(price);
       }
       else {
         big_half.push(price);
       }
 
+      // Rebalance by moving the top of the bigger half over
       if(small_half.size() > big_half.size() + 1){
-        big_half.push(price);
+        big_half.push(small_half.top());
         small_half.pop();
       }
       else if(small_half.size() < big_half.size()){
-        small_half.push(price);
+        small_half.push(big_half.top());
         big_half.pop();
       }
     }
 
-    void add_stock(Trader &t, bool m, bool time_travel){
+    void add_stock(Trader &t, bool time_travel){
       if(t.buy) buyers.push(t);
       else sellers.push(t);
 
-      if(m) add_to_median(t.price);
+      if(time_travel) update_time_traveler(t);
+    }
 
-      if(time_travel){
-        // Time Travelers
-        if (!t.buy){
-          if (tt.state == TimeStatus::NoTrades){
+    // Time traveler buys from SELL orders and sells to BUY orders
+    void update_time_traveler(const Trader &t){
+      switch(tt.state){
+        case TimeStatus::NoTrades:
+          if(!t.buy){
             tt.state = TimeStatus::CanBuy;
-            tt.current_min_sell_price = t.price;
-            tt.current_min_sell_time = t.timestamp;
+            tt.best_buy_price = t.price;
+            tt.best_buy_time = t.timestamp;
           }
-          else{
-            if (t.price < tt.current_min_sell_price){
-              int potential_profit = t.price - tt.current_min_sell_price;
-              if (potential_profit > tt.max_profit){
-                tt.max_profit = potential_profit;
-                tt.best_buy_price = tt.current_min_sell_price;
-                tt.best_buy_time = tt.current_min_sell_time;
-                tt.best_sell_price = t.price;
-                tt.best_sell_time = t.timestamp;
+          break;
 
-                tt.state = TimeStatus::Completed;
-              }
-            }
+        case TimeStatus::CanBuy:
+          if(!t.buy && t.price < tt.best_buy_price){
+            tt.best_buy_price = t.price;
+            tt.best_buy_time = t.timestamp;
           }
-        }
+          else if(t.buy && t.price > tt.best_buy_price){
+            tt.state = TimeStatus::Completed;
+            tt.best_sell_price = t.price;
+            tt.best_sell_time = t.timestamp;
+          }
+          break;
+
+        case TimeStatus::Completed:
+          if(t.buy && t.price > tt.best_sell_price){
+            tt.best_sell_price = t.price;
+            tt.best_sell_time = t.timestamp;
+          }
+          else if(!t.buy && t.price < tt.best_buy_price){
+            tt.state = TimeStatus::Potential;
+            tt.potential_buy_price = t.price;
+            tt.potential_buy_time = t.timestamp;
+          }
+          break;
+
+        case TimeStatus::Potential:
+          if(!t.buy && t.price < tt.potential_buy_price){
+            tt.potential_buy_price = t.price;
+            tt.potential_buy_time = t.timestamp;
+          }
+          else if(t.buy && t.price - tt.potential_buy_price >
+                  tt.best_sell_price - tt.best_buy_price){
+            tt.state = TimeStatus::Completed;
+            tt.best_buy_price = tt.potential_buy_price;
+            tt.best_buy_time = tt.potential_buy_time;
+            tt.best_sell_price = t.price;
+            tt.best_sell_time = t.timestamp;
+          }
+          break;
       }
     }
 
     // Match buyers and sellers for this stock ID
-    int match_traders(bool v, bool ti, vector<TraderStats> &stats){
+    int match_traders(bool v, bool ti, bool m, vector<TraderStats> &stats){
       int count = 0;
-      bool matching = true;
-      while(matching){
+      while(!buyers.empty() && !sellers.empty()){
         Trader b = buyers.top();
         Trader s = sellers.top();
-        if(!buyers.empty() && !sellers.empty() && b.price >= s.price){
-          // Execute order
-          int amt_sold;
-          if(b.quantity > s.quantity) amt_sold = s.quantity;
-          else amt_sold = b.quantity;
+        if(b.price < s.price) break;
 
-          // Trader Info
-          if(ti){
-            int buyer_index = b.order_number;
-            int seller_index = s.order_number;
-            
-            stats[buyer_index].bought += amt_sold;
-            stats[seller_index].sold += amt_sold;
-            stats[seller_index].net_transfer += s.price;
-            stats[buyer_index].net_transfer -= s.price;
-          }
-          
-          // Verbose
-          if(v){
-            cout << "Trader " << b.trader_ID << " purchased " << amt_sold << 
-                " shares of Stock " << s.stock_ID << " from Trader " << s.trader_ID 
-                << " for $" << s.price << "/share\n";
-          }
+        // Trade happens at the price of whichever order came first
+        int price;
+        if(b.order_number < s.order_number) price = b.price;
+        else price = s.price;
 
-          // Pop the traders
-          buyers.pop();
-          sellers.pop();
+        int amt_sold;
+        if(b.quantity > s.quantity) amt_sold = s.quantity;
+        else amt_sold = b.quantity;
 
-          count++;
+        // Trader Info
+        if(ti){
+          size_t buyer_index = static_cast<size_t>(b.trader_ID);
+          size_t seller_index = static_cast<size_t>(s.trader_ID);
+
+          stats[buyer_index].bought += amt_sold;
+          stats[seller_index].sold += amt_sold;
+          stats[seller_index].net_transfer += price * amt_sold;
+          stats[buyer_index].net_transfer -= price * amt_sold;
         }
-        else{
-          matching = false;
+
+        // Verbose
+        if(v){
+          cout << "Trader " << b.trader_ID << " purchased " << amt_sold <<
+              " shares of Stock " << s.stock_ID << " from Trader " << s.trader_ID
+              << " for $" << price << "/share\n";
         }
+
+        if(m) add_to_median(price);
+
+        // Pop the traders, push back whichever still has shares left
+        buyers.pop();
+        sellers.pop();
+        b.quantity -= amt_sold;
+        s.quantity -= amt_sold;
+        if(b.quantity > 0) buyers.push(b);
+        if(s.quantity > 0) sellers.push(s);
+
+        count++;
       }
-      
+
       return count;
+    }
+
+    // True once at least one trade has happened
+    bool has_median(){
+      return !small_half.empty();
     }
 
     int get_median(){
@@ -185,10 +218,15 @@ class Stock{
         return small_half.top();
       }
       else{
-        return small_half.top() + big_half.top() / 2;
+        return (small_half.top() + big_half.top()) / 2;
       }
     }
-  
+
+    // True if a time traveler could make a profit on this stock
+    bool tt_has_profit(){
+      return tt.state == TimeStatus::Completed || tt.state == TimeStatus::Potential;
+    }
+
     int get_buy_time(){
       return tt.best_buy_time;
     }

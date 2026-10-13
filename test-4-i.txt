@@ -1,0 +1,9 @@
+COMMENT: Trader info net transfer and zero-sum accounting
+MODE: TL
+NUM_TRADERS: 3
+NUM_STOCKS: 2
+0 SELL T0 S0 $10 #50
+0 BUY T1 S0 $10 #20
+0 BUY T2 S0 $10 #30
+1 SELL T1 S1 $100 #5
+1 BUY T1 S1 $100 #5

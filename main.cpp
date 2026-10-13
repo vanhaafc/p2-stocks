@@ -51,7 +51,7 @@ void getOptions(int argc, char **argv, Options &options) {
         {"verbose",        no_argument, nullptr, 'v'},
         {"median",         no_argument, nullptr, 'm'},
         {"trader_info",    no_argument, nullptr, 'i'},
-        {"time_traveler",  no_argument, nullptr, 't'},
+        {"time_travelers",  no_argument, nullptr, 't'},
         {nullptr,      0,               nullptr, '\0'},
     };  // longOptions[]
     // NOLINTEND
@@ -79,7 +79,7 @@ void getOptions(int argc, char **argv, Options &options) {
             break;
 
         default:
-            cerr << "Unknown command line option\n";
+            cerr << "Error: Unknown command line option\n";
             exit(1);
 
         }
