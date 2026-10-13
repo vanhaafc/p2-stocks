@@ -1,0 +1,6 @@
+COMMENT: Match price determined by resting buyer price
+MODE: TL
+NUM_TRADERS: 2
+NUM_STOCKS: 1
+0 BUY T0 S0 $100 #10
+1 SELL T1 S0 $20 #10

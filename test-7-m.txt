@@ -1,0 +1,10 @@
+COMMENT: Median output suppression during same timestamp and untraded stock filtering
+MODE: TL
+NUM_TRADERS: 3
+NUM_STOCKS: 3
+0 SELL T0 S0 $10 #10
+0 BUY T1 S0 $10 #10
+0 SELL T0 S0 $20 #10
+0 BUY T1 S0 $20 #10
+1 SELL T0 S1 $100 #5
+1 BUY T1 S1 $100 #5

@@ -1,0 +1,8 @@
+COMMENT: Time traveler tie-breaking for identical max profit pairs
+MODE: TL
+NUM_TRADERS: 2
+NUM_STOCKS: 1
+0 SELL T0 S0 $10 #10
+1 BUY T1 S0 $30 #10
+2 SELL T0 S0 $20 #10
+3 BUY T1 S0 $40 #10

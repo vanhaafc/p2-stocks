@@ -166,6 +166,7 @@ public:
     cin >> num_stocks;
     stocks.resize(static_cast<size_t>(num_stocks));
     if (trader_info) stats.resize(static_cast<size_t>(num_traders));
+    // TODO: Do I need this? Is there a faster way to fill the vector?
     for (size_t i = 0; i < static_cast<size_t>(num_stocks); i++){
       Stock s;
       stocks[i] = s;
