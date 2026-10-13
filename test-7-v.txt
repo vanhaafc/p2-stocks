@@ -1,0 +1,16 @@
+COMMENT: Buy side priority and multi-order sweeps at resting prices
+MODE: TL
+NUM_TRADERS: 4
+NUM_STOCKS: 3
+0 BUY T0 S2 $100 #10
+0 BUY T1 S2 $100 #10
+0 BUY T2 S2 $120 #5
+1 SELL T3 S2 $90 #20
+1 SELL T3 S0 $50 #10
+1 SELL T2 S0 $40 #10
+1 SELL T1 S0 $60 #10
+2 BUY T0 S0 $55 #25
+2 BUY T1 S1 $10 #5
+3 SELL T3 S0 $55 #5
+3 SELL T2 S1 $11 #5
+4 BUY T3 S1 $11 #3
