@@ -67,7 +67,7 @@ struct compareSeller{
 class Stock{
   private:
     // TODO: Only need price, quantity, trader_ID, and order_number, not any of the other Trader variables
-    // how to change that????
+    // how to change that??
     priority_queue<Trader, vector<Trader>, compareBuyer> buyers;
     priority_queue<Trader, vector<Trader>, compareSeller> sellers;
 
