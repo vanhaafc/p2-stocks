@@ -49,10 +49,8 @@ public:
   }
 
   // Matches the orders, call in read
-  void match(){
-    for (size_t i = 0; i < stocks.size(); i++){
-      trade_count += stocks[i].match_traders(verbose, trader_info, median, stats);
-    }
+  void match(int i){
+      trade_count += stocks[static_cast<size_t>(i)].match_traders(verbose, trader_info, median, stats);
   }
 
   // Print the median for every stock that has had a trade
@@ -125,7 +123,7 @@ public:
       process(t, buy_sell, previous_timestamp);
 
       // Match the stocks
-      match();
+      match(t.stock_ID);
     } // while
 
     if (median) print_medians(previous_timestamp);
@@ -143,7 +141,7 @@ public:
       process(t, buy_sell, previous_timestamp);
 
       // Match stocks
-      match();
+      match(t.stock_ID);
     } // while
 
     if (median) print_medians(previous_timestamp);
@@ -201,8 +199,7 @@ public:
     // Trader Info Ooutput
     if (trader_info){
       cout << "---Trader Info---\n";
-      for (size_t i = 0; i < static_cast<size_t>(num_traders); ++i)
-      {
+      for (size_t i = 0; i < static_cast<size_t>(num_traders); ++i){
         cout << "Trader " << i << " bought " << stats[i].bought
              << " and sold " << stats[i].sold << " for a net transfer of $"
              << stats[i].net_transfer << "\n";

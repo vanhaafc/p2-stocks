@@ -1,3 +1,5 @@
+// Project identifier: 0E04A31E0D60C01986ACB20081C9D8722A2619B6
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -19,8 +21,6 @@ struct Trader {
   int stock_ID;
   int price;
   int quantity;
-
-  // 1 is the first order, 2 is the second, etc.
   int order_number;
 };
 
@@ -49,7 +49,7 @@ struct TimeTraveler
 
 // Buyer comparator
 struct compareBuyer{
-  bool operator() (const Trader a, const Trader b) const {
+  bool operator() (const Trader &a, const Trader &b) const {
     if(a.price == b.price) return a.order_number > b.order_number;
     return a.price < b.price;
   }
@@ -58,7 +58,7 @@ struct compareBuyer{
 
 // Seller comparator
 struct compareSeller{
-  bool operator() (const Trader a, const Trader b) const {
+  bool operator() (const Trader &a, const Trader &b) const {
     if(a.price == b.price) return a.order_number > b.order_number;
     return a.price > b.price;
   }
@@ -66,6 +66,8 @@ struct compareSeller{
 
 class Stock{
   private:
+    // TODO: Only need price, quantity, trader_ID, and order_number, not any of the other Trader variables
+    // how to change that????
     priority_queue<Trader, vector<Trader>, compareBuyer> buyers;
     priority_queue<Trader, vector<Trader>, compareSeller> sellers;
 
